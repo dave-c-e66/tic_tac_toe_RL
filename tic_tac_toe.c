@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#define STATE_TABLE_SIZE 10000  // larger then optimal 
+#define STATE_TABLE_SIZE 9973  // larger then optimal, use prime number to reduce colisions
 
 struct board {
     char  g_board[9];
@@ -28,14 +28,15 @@ int is_game_over(struct board game_board, int turn_num);
 struct player * switch_player(struct player *player1, struct player *player2, struct player *curr_player);
 void print_winner(int winner);
 int human_game_loop(struct board game_board, struct player *player1, struct player *player2, struct player *curr_player);
+int human_game_loop2(struct board game_board, struct player *player1, struct player *player2, struct player *curr_player);
 int hash_function(int key);
 void insert(int key, int value, struct key_value hash_table[]);
 int search(int key, struct key_value hash_table[]);
-
+int board_to_key(struct board game_board);
 
 int main() {
     int winner = 0;    
-    struct board game_board = {"123456789"};
+    struct board game_board = {"333333333"};
     //print_board(game_board);
     struct player *player1;
     player1 = setup_player("X", 1);
@@ -45,7 +46,7 @@ int main() {
     curr_player = player1;
     //printf("players name is %s", player1->name);
     struct key_value hash_table[STATE_TABLE_SIZE];
-    //winner = human_game_loop(game_board, player1, player2, curr_player);
+    winner = human_game_loop2(game_board, player1, player2, curr_player);
     print_winner(winner);
     insert(42000, 100, hash_table);
     insert(17000, 200, hash_table);
@@ -53,6 +54,8 @@ int main() {
     printf("Value for key 42: %d\n", search(42000, hash_table));
     printf("Value for key 17: %d\n", search(17000, hash_table));
     return 0;
+    free(player1);
+    free(player2);
 }
 
 void print_board(struct board game_board){
@@ -85,7 +88,7 @@ int is_valid_move(struct board game_board, int chosen_sq){
     int board_sq = (int)game_board.g_board[chosen_sq - 1] - (int)'0';  // get int value of square 
     if (chosen_sq < 1 || chosen_sq > 9)
         return 0;
-    if (board_sq == chosen_sq)
+    if (board_sq == 3)   // blank squares are 3 as board in created filled with 3's
         return 1;
     else
         return 0;
@@ -223,4 +226,56 @@ int search(int key, struct key_value hash_table[]) {
     }
     // Handle collisions (e.g., search through linked list)
     return -1; // Not found
+}
+
+int board_to_key(struct board game_board){
+    char digit_board[9];
+    for (int i=0; i < 9; i++){
+        if(isdigit(game_board.g_board[i]))
+            digit_board[i] = game_board.g_board[i];
+        else if(game_board.g_board[i] == 'X')
+            digit_board[i] = '1';
+        else
+            digit_board[i] = '2';
+    }
+    int board_num = atoi(digit_board);
+    return board_num;
+}
+
+
+
+
+
+
+
+int human_game_loop2(struct board game_board, struct player *player1, struct player *player2, struct player *curr_player){
+    int turn_num = 0;
+    int game_over = 0;
+    while(game_over == 0){
+        int chosen_sq = 0;
+        print_board(game_board);
+        
+        while(chosen_sq == 0){
+            int valid = 0;
+            printf("Enter which square you want (1-9) : ");
+            scanf("%d", &chosen_sq);
+            valid = is_valid_move(game_board, chosen_sq);
+            if (valid == 0)
+                chosen_sq = 0;
+            else{
+                turn_num++;
+                update_board(&game_board, chosen_sq, curr_player->mark);
+                printf("\n game board num is %d \n", board_to_key(game_board));
+                game_over = is_game_over(game_board, turn_num);
+                //printf("\n Game over is %d", game_over);
+                curr_player = switch_player(player1, player2, curr_player);
+            }
+                
+        }
+        
+        //printf("game over %d", game_over);
+    }
+    print_board(game_board);
+    return game_over;
+
 }
