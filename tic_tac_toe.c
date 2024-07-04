@@ -33,7 +33,7 @@ void print_winner(int winner);
 int human_game_loop(struct board game_board, struct player *player1, struct player *player2, struct player *curr_player);
 int human_game_loop2(struct board game_board, struct player *player1, struct player *player2, struct player *curr_player);
 int hash_function(int key);
-void update_value(int key, float value, struct key_value hash_table[], int new_key);
+void update_value(int key, float value, struct key_value hash_table[]);
 void insert_value(int key, struct key_value hash_table[], int index);
 float get_value(int key, struct key_value hash_table[]);
 struct key_value *get_node(int key, struct key_value hash_table[], int index);
@@ -93,7 +93,9 @@ void test_hash_table(struct key_value hash_table[]){
     printf("\n value %f index %d \n", value, index);
     print_key_value(&hash_table[index]);
     printf("\n Start of hash table %p \n", (void*)&hash_table[0]);
-    
+    update_value(key=9974,1.3,hash_table);
+    update_value(key=19947,2.4,hash_table);
+    update_value(key=29920,3.5,hash_table);
 
     printf("\nFinal Key: %d Initialized: %d Value: %f  next node %p \n", hash_table[1].key, hash_table[1].key_initialized, hash_table[1].value, (void*)(&(hash_table[1].next_node)));
     struct key_value *new_key_value = hash_table[1].next_node;
@@ -237,24 +239,20 @@ int hash_function(int key) {
     return key % STATE_TABLE_SIZE;
 }
 
-void update_value(int key, float value, struct key_value hash_table[], int new_key) {
+void update_value(int key, float value, struct key_value hash_table[]) {
+    // get value which adds new nodes is always be run before update_value so the index will always exist
     int index = hash_function(key);
-    if (new_key){                              // if this is a new key value pair set next node equal to NULL
-        hash_table[index].next_node = NULL;    
-        hash_table[index].key = key;
+    if (hash_table[index].key == key) {
         hash_table[index].value = value;
     }
-    else if(hash_table[index].key == key)      // if key already exists and matches what is stored in table update value
-        hash_table[index].value = value;
-    else{                                     // this is case where there is collision in hash table need to add or update node
-        //struct key_value *node_hash_table = get_node(key, hash_table, index);
-        //node_hash_table->value = value;
-    }
-    //hash_table[index].key = key;
-    //hash_table[index].value = value;
-
-    printf("\n added value %f to state %d in set of states \n", value, key);
+    else{         // have a collision need to find right node before updating value. 
+        struct key_value *current_node = get_node(key, hash_table, index);
+        current_node->value = value;    
+        }
+        
 }
+
+
 
 void insert_value(int key, struct key_value hash_table[], int index){
     if(hash_table[index].key_initialized == 0){    // new value to add directly to hash_table
@@ -296,10 +294,6 @@ float get_value(int key, struct key_value hash_table[]) {
         }
         return current_node->value;
     }
-    // next 
-    // Handle collisions (e.g., search through linked list)
-    //update_value(key, 0, hash_table, 1);  // initiate value equal to 0
-    return -1; // Not found
 }
 
 struct key_value *get_node(int key, struct key_value hash_table[], int index){
@@ -314,15 +308,7 @@ struct key_value *get_node(int key, struct key_value hash_table[], int index){
         current_node = next_node;
         next_node = next_node->next_node;
     }
-    return current_node;  // if not found return current node    
-     // This is the first collision for this key so need to add new node
-    //struct key_value *new_key_value;
-    //new_key_value->key = key;
-    //new_key_value->value = value;
-    //new_key_value->next_node = NULL;
-    //return new_key_value;
-    
-
+    return current_node;  // if not found return current node      
 
 }
 
