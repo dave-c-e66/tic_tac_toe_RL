@@ -19,6 +19,8 @@ struct player {
 struct key_value {
     int key;
     float value;
+    struct key_value* next_node;
+    int key_initialized;
 };
 
 void print_board(struct board game_board);
@@ -31,13 +33,17 @@ void print_winner(int winner);
 int human_game_loop(struct board game_board, struct player *player1, struct player *player2, struct player *curr_player);
 int human_game_loop2(struct board game_board, struct player *player1, struct player *player2, struct player *curr_player);
 int hash_function(int key);
-void insert(int key, float value, struct key_value hash_table[]);
+void update_value(int key, float value, struct key_value hash_table[], int new_key);
+void insert_value(int key, struct key_value hash_table[], int index);
 float get_value(int key, struct key_value hash_table[]);
+struct key_value *get_node(int key, struct key_value hash_table[], int index);
+void insert_node(int key, struct key_value *current_node);
 int board_to_key(struct board game_board);
 int q_learning(struct board game_board, struct player *player1, struct player *player2, struct player *curr_player, int num_games, struct key_value hash_table[]);
 int next_available_ai(struct board game_board);
 int q_learn_ai(struct board game_board, struct key_value hash_table[], int epsilon, struct player *curr_player);
-
+void test_hash_table(struct key_value hash_table[]);
+void print_key_value(struct key_value *kv);
 
 int main() {
     int winner = 0;    
@@ -51,18 +57,60 @@ int main() {
     curr_player = player1;
     //printf("players name is %s", player1->name);
     struct key_value hash_table[STATE_TABLE_SIZE];
+    for(int i=0; i<10;i++){
+        printf("key %d value %f \n",hash_table[i].key,hash_table[i].value);
+    }
     //winner = human_game_loop2(game_board, player1, player2, curr_player);
-    winner = q_learning(game_board, player1, player2, curr_player, 1, hash_table);
-    print_winner(winner);
+    //winner = q_learning(game_board, player1, player2, curr_player, 1, hash_table);
+    //print_winner(winner);
     //insert(42000, 100, hash_table);
     //insert(17000, 200, hash_table);
-
+    test_hash_table(hash_table);
     //printf("Value for key 42: %d\n", search(42000, hash_table));
     //printf("Value for key 17: %d\n", search(17000, hash_table));
     return 0;
     free(player1);
     free(player2);
+    // need a function to search through hash_table to find any nodes that have been added and free that memory.
 }
+
+void test_hash_table(struct key_value hash_table[]){
+    float value;
+    int index = 0;
+    int key = 9974;
+    value = get_value(key, hash_table);
+    index = hash_function(key);
+    printf("\n value %f index %d \n", value, index);
+    print_key_value(&hash_table[index]);
+    key = 19947;
+    value = get_value(key, hash_table);
+    index = hash_function(key);
+    printf("\n value %f index %d \n", value, index);
+    print_key_value(&hash_table[index]);
+    key = 29920;
+    value = get_value(key, hash_table);
+    index = hash_function(key);
+    printf("\n value %f index %d \n", value, index);
+    print_key_value(&hash_table[index]);
+    printf("\n Start of hash table %p \n", (void*)&hash_table[0]);
+    
+
+    printf("\nFinal Key: %d Initialized: %d Value: %f  next node %p \n", hash_table[1].key, hash_table[1].key_initialized, hash_table[1].value, (void*)(&(hash_table[1].next_node)));
+    struct key_value *new_key_value = hash_table[1].next_node;
+    printf("\n Next node Final Key: %d Initialized: %d Value: %f  next node %p \n", new_key_value->key, new_key_value->key_initialized, new_key_value->value, (void*)(&(new_key_value->next_node)));
+    new_key_value = new_key_value->next_node;
+    printf("\n Final node Final Key: %d Initialized: %d Value: %f  next node %p \n", new_key_value->key, new_key_value->key_initialized, new_key_value->value, (void*)(&(new_key_value->next_node)));
+    printf("\n Final node Final Key: %d Initialized: %d Value: %f  next node %p \n", new_key_value->key, new_key_value->key_initialized, new_key_value->value, new_key_value->next_node);
+    new_key_value = new_key_value->next_node;
+    printf("\n Final Final node Final Key: %d Initialized: %d Value: %f  next node %p \n", new_key_value->key, new_key_value->key_initialized, new_key_value->value, (void*)(&(new_key_value->next_node)));
+}
+
+void print_key_value(struct key_value *kv){
+    int next_node = (kv->next_node != NULL);
+    printf("\nKey: %d Initialized: %d Value: %f next node: %d  \n", kv->key, kv->key_initialized, kv->value, next_node);
+}
+
+
 
 void print_board(struct board game_board){
     for(int i = 1; i < 10; i++){
@@ -189,11 +237,45 @@ int hash_function(int key) {
     return key % STATE_TABLE_SIZE;
 }
 
-void insert(int key, float value, struct key_value hash_table[]) {
+void update_value(int key, float value, struct key_value hash_table[], int new_key) {
     int index = hash_function(key);
-    hash_table[index].key = key;
-    hash_table[index].value = value;
+    if (new_key){                              // if this is a new key value pair set next node equal to NULL
+        hash_table[index].next_node = NULL;    
+        hash_table[index].key = key;
+        hash_table[index].value = value;
+    }
+    else if(hash_table[index].key == key)      // if key already exists and matches what is stored in table update value
+        hash_table[index].value = value;
+    else{                                     // this is case where there is collision in hash table need to add or update node
+        //struct key_value *node_hash_table = get_node(key, hash_table, index);
+        //node_hash_table->value = value;
+    }
+    //hash_table[index].key = key;
+    //hash_table[index].value = value;
+
     printf("\n added value %f to state %d in set of states \n", value, key);
+}
+
+void insert_value(int key, struct key_value hash_table[], int index){
+    if(hash_table[index].key_initialized == 0){    // new value to add directly to hash_table
+        hash_table[index].key = key;
+        hash_table[index].value = 0.0;
+        hash_table[index].next_node = NULL; 
+        hash_table[index].key_initialized = 1;
+    }
+    
+    
+}
+
+void insert_node(int key, struct key_value *current_node){
+    struct key_value *new_key_value = (struct key_value*)malloc(sizeof(struct key_value));
+    new_key_value->key = key;
+    new_key_value->value = 0.0;
+    new_key_value->next_node = NULL;
+    new_key_value->key_initialized = 1;
+    current_node->next_node = new_key_value;
+    //printf("\nKey: %d Initialized: %d Value: %f next node: %p  \n", current_node.key, current_node.key_initialized, current_node.value, current_node.next_node);
+
 }
 
 float get_value(int key, struct key_value hash_table[]) {
@@ -201,9 +283,47 @@ float get_value(int key, struct key_value hash_table[]) {
     if (hash_table[index].key == key) {
         return hash_table[index].value;
     }
+    else if(hash_table[index].key_initialized == 0){    // need to initialize key value
+        insert_value(key, hash_table, index);
+        return hash_table[index].value;
+    }
+    else{         // have a collision need to see if node exists, if not add it. 
+        struct key_value *current_node = get_node(key, hash_table, index);
+        if(current_node->key != key){    // node needs to be added already existed so return value
+            insert_node(key, current_node);
+            printf("\n in get_value collision Key: %d Initialized: %d Value: %f next node: %p  \n", current_node->key, current_node->key_initialized, current_node->value, (void*)current_node->next_node);
+            current_node = current_node->next_node;
+        }
+        return current_node->value;
+    }
+    // next 
     // Handle collisions (e.g., search through linked list)
-    insert(key, 0, hash_table);  // initiate value equal to 0
+    //update_value(key, 0, hash_table, 1);  // initiate value equal to 0
     return -1; // Not found
+}
+
+struct key_value *get_node(int key, struct key_value hash_table[], int index){
+    
+    struct key_value *current_node;
+    struct key_value *next_node;
+    current_node = &hash_table[index];
+    next_node = current_node->next_node;
+    while( next_node != NULL){
+        if (next_node->key == key)
+            return next_node;                // if node with key already exists return it when found
+        current_node = next_node;
+        next_node = next_node->next_node;
+    }
+    return current_node;  // if not found return current node    
+     // This is the first collision for this key so need to add new node
+    //struct key_value *new_key_value;
+    //new_key_value->key = key;
+    //new_key_value->value = value;
+    //new_key_value->next_node = NULL;
+    //return new_key_value;
+    
+
+
 }
 
 int board_to_key(struct board game_board){
